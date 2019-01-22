@@ -77,7 +77,11 @@ let czy_wszystkie_puste_lub_pelne tab =
 (*     FUNKCJE GRAFOWE     *)
 (***************************)
 
-(* Wytwarza stan w postaci tablicy na podstawie danej liczby. *)
+(* Wytwarza stan w postaci tablicy na podstawie danej liczby. 
+ * Liczba jednoznacznie opisuje stan następująco :
+ * jest to suma wyrażeń stan.(i) * iloczyny.(i), gdzie
+ * stan to pojemności szklanek w danym momencie, a iloczyny
+ * to iloczyny prefiksowe pojemności szklanek. *)
 let stan_z_liczby n iloczyny =
         let len = Array.length iloczyny
         in let stan = Array.make (len - 1) 0
@@ -121,7 +125,12 @@ let dodaj_odleglosc x odl dl l =
         if zmiana then odl.(x) <- dl;
         if zmiana then (odl, (x :: l))
         else (odl, l)
-
+		
+(* BFS, kończący się w momencie odwiedzenia stanu końcowego lub przejścia wszystkich
+ * możliwych do odwiedzenia stanów. 
+ * Przyjmowane argumenty to kolejno : lista wierzchołków z aktualnie przetwarzanego bloku,
+ * lista wierzchołków z kolejnego bloku, odległość bloku od źródła, iloczyny prefiksowe
+ * pojemności szklanek, pojemności szklanek i stan końcowy. *)
 let rec bfs l1 l2 dl odl iloczyny pojemnosci koniec =
         if pusta l1 && pusta l2 then (-1)
         else match l1 with

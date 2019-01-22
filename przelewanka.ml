@@ -1,5 +1,5 @@
 (* Autor : Michał Borowski *)
-(* Code Review : - *)
+(* Code Review : Wojciech Kłopotek *)
 
 (***************************)
 (*     OPERACJE OGÓLNE     *)

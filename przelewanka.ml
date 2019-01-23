@@ -34,9 +34,6 @@ let usun_zera tab =
 let podziel tab d =
         Array.map (fun x -> x / d) tab
 
-let iloczyny_prefiksowe tab =
-        Array.fold_left (fun l x -> ((List.hd l) * (x + 1))::l ) [1] tab |> List.rev |> Array.of_list
-
 (***************************)
 (*  FUNKCJE PRZYGOTOWUJĄCE *)
 (***************************)
@@ -77,42 +74,40 @@ let czy_wszystkie_puste_lub_pelne tab =
 (*     FUNKCJE GRAFOWE     *)
 (***************************)
 
-(* Wytwarza stan w postaci tablicy na podstawie danej liczby. 
- * Liczba jednoznacznie opisuje stan następująco :
- * jest to suma wyrażeń stan.(i) * iloczyny.(i), gdzie
- * stan to pojemności szklanek w danym momencie, a iloczyny
- * to iloczyny prefiksowe pojemności szklanek. *)
-let stan_z_liczby n iloczyny =
-        let len = Array.length iloczyny
-        in let stan = Array.make (len - 1) 0
-        in let l = ref n
-        in begin
-                for i = (len - 2) downto 0 do
-                        stan.(i) <- (!l) / iloczyny.(i);
-                        l := (!l) - stan.(i) * iloczyny.(i);
-                done;
-        end;
-        stan
-
-(* Zwraca listę stanów do których można dotrzeć z danego stanu w jeden operacji. *)        
-let kolejne_stany stan numer iloczyny pojemnosci =
+(* Zwraca listę stanów do których można dotrzeć z danego stanu w jednej operacji. *)        
+let kolejne_stany stan pojemnosci =
         let l = ref []
         in let len = (Array.length stan) - 1
+        in let kolejny_stan = (Array.copy stan)
         in begin
                for i = 0 to len do
-                       l := (numer - stan.(i) * iloczyny.(i))::(!l);
+                       kolejny_stan.(i) <- 0;
+                       l := (Array.copy kolejny_stan)::(!l);
+                       kolejny_stan.(i) <- stan.(i);
                done;
                for i = 0 to len do
-                       l := (numer + (pojemnosci.(i) - stan.(i)) * iloczyny.(i))::(!l);
+                       kolejny_stan.(i) <- pojemnosci.(i);
+                       l := (Array.copy kolejny_stan)::(!l);
+                       kolejny_stan.(i) <- stan.(i);
                done;
                for i = 0 to len do
                        for j = 0 to len do
-                               let roznica = pojemnosci.(j) - stan.(j)
+                               let roznica = if i = j then 0 else pojemnosci.(j) - stan.(j)
                                in 
-                                    if roznica < stan.(i) then
-                                       l := (numer + roznica * iloczyny.(j) - roznica * iloczyny.(i))::(!l)
-                                    else
-                                       l := (numer + stan.(i) * iloczyny.(j) - stan.(i) * iloczyny.(i))::(!l);
+                                    if roznica < stan.(i) then begin
+                                       kolejny_stan.(j) <- pojemnosci.(j);
+                                       kolejny_stan.(i) <- (stan.(i) - roznica); 
+                                       l := (Array.copy kolejny_stan)::(!l);
+                                       kolejny_stan.(j) <- stan.(j);
+                                       kolejny_stan.(i) <- stan.(i);
+                                       end
+                                    else begin
+                                       kolejny_stan.(j) <- (stan.(j) + stan.(i));
+                                       kolejny_stan.(i) <- 0; 
+                                       l := (Array.copy kolejny_stan)::(!l);
+                                       kolejny_stan.(j) <- stan.(j);
+                                       kolejny_stan.(i) <- stan.(i);
+                                    end;
                        done;
                done;
          end;
@@ -120,10 +115,10 @@ let kolejne_stany stan numer iloczyny pojemnosci =
 
 (* Sprawdza czy stan był już odwiedzony, jeśli nie to aktualizuje odległość 
  * i listę stanów do odwiedzenia. *)
-let dodaj_odleglosc x odl dl l =
-        let zmiana = (odl.(x) = -1) in
-        if zmiana then odl.(x) <- dl;
-        if zmiana then (odl, (x :: l))
+let dodaj_odleglosc stan odl dl l =
+        let zmiana = not (Hashtbl.mem odl stan) in
+        if zmiana then Hashtbl.add odl stan dl;
+        if zmiana then (odl, (stan :: l))
         else (odl, l)
 		
 (* BFS, kończący się w momencie odwiedzenia stanu końcowego lub przejścia wszystkich
@@ -131,15 +126,14 @@ let dodaj_odleglosc x odl dl l =
  * Przyjmowane argumenty to kolejno : lista wierzchołków z aktualnie przetwarzanego bloku,
  * lista wierzchołków z kolejnego bloku, odległość bloku od źródła, iloczyny prefiksowe
  * pojemności szklanek, pojemności szklanek i stan końcowy. *)
-let rec bfs l1 l2 dl odl iloczyny pojemnosci koniec =
+let rec bfs l1 l2 dl odl pojemnosci koniec =
         if pusta l1 && pusta l2 then (-1)
         else match l1 with
-        | [] -> bfs l2 l1 (dl + 1) odl iloczyny pojemnosci koniec
-        | (h :: t) -> let stan = stan_z_liczby h iloczyny
-                      in let stany = kolejne_stany stan h iloczyny pojemnosci
+        | [] -> bfs l2 l1 (dl + 1) odl pojemnosci koniec
+        | (stan :: t) -> let stany = kolejne_stany stan pojemnosci
                       in let (odl2, l3) = List.fold_left (fun (od, l) x -> dodaj_odleglosc x od dl l) (odl, l2) stany
-                      in if (odl2.(koniec) <> (-1)) then odl2.(koniec)
-                      else bfs t l3 dl odl2 iloczyny pojemnosci koniec
+                      in if (Hashtbl.mem odl2 koniec) then (Hashtbl.find odl2 koniec)
+                      else bfs t l3 dl odl2 pojemnosci koniec
         
 
 let przelewanka tab =
@@ -149,9 +143,8 @@ let przelewanka tab =
         else let cz = czy_wszystkie_puste_lub_pelne tab
         in if cz <> (-1) then cz
         else
-                let (pojemnosci, stan_koncowy) = normalizuj tab
-                in let iloczyny = iloczyny_prefiksowe pojemnosci
-                in let koniec = Array.fold_left (fun (kon, i) x -> (kon + x * iloczyny.(i), i + 1)) (0, 0) stan_koncowy |> fst
-                in let odl = Array.make (iloczyny.((Array.length iloczyny) - 1)) (-1)
-                in odl.(0) <- 0;
-                bfs [0] [] 1 odl iloczyny pojemnosci koniec
+                let (pojemnosci, koniec) = normalizuj tab
+                in let odl = Hashtbl.create 10000000
+                in let poczatek = Array.make (Array.length pojemnosci) 0
+                in Hashtbl.add odl poczatek 0;
+                bfs [poczatek] [] 1 odl pojemnosci koniec

@@ -124,8 +124,8 @@ let dodaj_odleglosc stan odl dl l =
 (* BFS, kończący się w momencie odwiedzenia stanu końcowego lub przejścia wszystkich
  * możliwych do odwiedzenia stanów. 
  * Przyjmowane argumenty to kolejno : lista wierzchołków z aktualnie przetwarzanego bloku,
- * lista wierzchołków z kolejnego bloku, odległość bloku od źródła, iloczyny prefiksowe
- * pojemności szklanek, pojemności szklanek i stan końcowy. *)
+ * lista wierzchołków z kolejnego bloku, odległość bloku od źródła,
+ * pojemności szklanek i stan końcowy. *)
 let rec bfs l1 l2 dl odl pojemnosci koniec =
         if pusta l1 && pusta l2 then (-1)
         else match l1 with

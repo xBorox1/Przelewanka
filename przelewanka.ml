@@ -144,7 +144,7 @@ let przelewanka tab =
         in if cz <> (-1) then cz
         else
                 let (pojemnosci, koniec) = normalizuj tab
-                in let odl = Hashtbl.create 10000000
+                in let odl = Hashtbl.create 1
                 in let poczatek = Array.make (Array.length pojemnosci) 0
                 in Hashtbl.add odl poczatek 0;
                 bfs [poczatek] [] 1 odl pojemnosci koniec
